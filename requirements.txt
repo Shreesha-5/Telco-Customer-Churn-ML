@@ -9,3 +9,7 @@ python-dotenv
 joblib
 great-expectations
 pyt
+gradio
+xgboost==3.2.0
+psutil==7.2.2
+numpy==1.26.4

@@ -48,3 +48,4 @@ def train_model(df: pd.DataFrame, target_col: str):
         mlflow.log_input(train_ds, context="training")
 
         print(f"Model trained. Accuracy: {acc:.4f}, Recall: {rec:.4f}")
+

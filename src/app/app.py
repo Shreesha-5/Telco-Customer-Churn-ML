@@ -4,18 +4,23 @@ import gradio as gr
 import os
 import sys
 
-# Ensure we can import from src/serving when running "uvicorn src.app.app:app"
+# Ensure correct import path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from serving.inference import predict  # our single source of truth for inference
+from serving.inference import predict
 
+# === FASTAPI APP ===
 app = FastAPI()
 
 @app.get("/")
 def root():
     return {"status": "ok"}
 
-# Request schema (same fields you collect in the UI)
+@app.get("/health")
+def health():
+    return {"status": "running"}
+
+# === INPUT SCHEMA ===
 class CustomerData(BaseModel):
     gender: str
     Partner: str
@@ -36,15 +41,26 @@ class CustomerData(BaseModel):
     MonthlyCharges: float
     TotalCharges: float
 
+# === API ENDPOINT ===
 @app.post("/predict")
 def api_predict(data: CustomerData):
     try:
-        out = predict(data.dict())
-        return {"prediction": out}
-    except Exception as e:
-        return {"error": str(e)}
+        print("Incoming request:", data)
 
-# --- Gradio UI wrappers the same predict() ---
+        result = predict(data.model_dump())
+
+        return {
+            "status": "success",
+            "prediction": result
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": str(e)
+        }
+
+# === GRADIO UI FUNCTION ===
 def gradio_interface(
     gender, Partner, Dependents, PhoneService, MultipleLines,
     InternetService, OnlineSecurity, OnlineBackup, DeviceProtection,
@@ -71,9 +87,10 @@ def gradio_interface(
         "MonthlyCharges": float(MonthlyCharges),
         "TotalCharges": float(TotalCharges),
     }
-    out = predict(payload)
-    return str(out)
 
+    return predict(payload)
+
+# === GRADIO UI ===
 demo = gr.Interface(
     fn=gradio_interface,
     inputs=[
@@ -105,4 +122,5 @@ demo = gr.Interface(
     description="Fill in the customer details to get a churn prediction.",
 )
 
+# Mount Gradio UI at /ui
 app = gr.mount_gradio_app(app, demo, path="/ui")
